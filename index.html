@@ -1,0 +1,250 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Grapher</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #000000;
+            color: #000000;
+        }
+
+        header {
+            background: linear-gradient(90deg, #E43E8A, #4a6b8a);
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 2rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .input-card, .chart-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .input-card:hover, .chart-card:hover {
+            transform: translateY(-3px);
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.95rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            resize: vertical;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #2a3f5f;
+            box-shadow: 0 0 5px rgba(42,63,95,0.3);
+        }
+
+        button {
+            background: #E43E8A;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        button:hover {
+            background: #1f2c45;
+            transform: scale(1.05);
+        }
+
+        canvas {
+            background: #fff;
+            border-radius: 10px;
+        }
+
+        h2 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2a3f5f;
+        }
+
+        @media (max-width: 768px) {
+            canvas {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📊 FI-TECH DATA LOG GRAPHER</h1>
+    </header>
+
+    <main>
+        <div class="input-card">
+            <h2>Paste your Excel/CSV data Here</h2>
+            <textarea id="dataInput" placeholder="Paste your data here"></textarea><br><br>
+            <button onclick="processData()">Generate Charts</button>
+        </div>
+
+        <div class="chart-card">
+            <h2>Chart 1: RPM - Boost - AFR</h2>
+            <canvas id="myChart" width="700" height="400"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h2>Chart 2: RPM - Inj Duty - Fuel Flow Rate</h2>
+            <canvas id="myChart2" width="700" height="400"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h2>Chart 3: RPM - IAC - Target RPM</h2>
+            <canvas id="myChart3" width="700" height="400"></canvas>
+        </div>
+    </main>
+
+    <script>
+        function processData() {
+            const rawData = document.getElementById("dataInput").value.trim();
+            if (!rawData) return alert("Please paste some data!");
+
+            const rows = rawData.split(/\r?\n/);
+            const headers = rows[0].split(/\t|,/);
+            const filteredRows = [rows[0]];
+
+            for (let i = 1; i < rows.length; i++) {
+                if (i % 2 === 1) filteredRows.push(rows[i]);
+            }
+
+            function getColumn(index) {
+                return filteredRows.slice(1).map(row => {
+                    const cols = row.split(/\t|,/);
+                    const val = parseFloat((cols[index] || '').trim());
+                    return isNaN(val) ? null : val;
+                });
+            }
+
+            // Chart 1: A (0), C (2), E (4)
+            const colA = getColumn(0);
+            const colC = getColumn(2);
+            const colE = getColumn(4);
+
+            const ctx1 = document.getElementById('myChart').getContext('2d');
+            if (window.chart) window.chart.destroy();
+
+            window.chart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: colA.map((_, i) => i+1),
+                    datasets: [
+                        { label: headers[0], data: colA, borderColor: 'green', borderWidth: 1.5, fill: false, yAxisID: 'y', tension: 0.1 },
+                        { label: headers[2], data: colC, borderColor: 'blue', borderWidth: 1.5, fill: false, yAxisID: 'y1', tension: 0.1 },
+                        { label: headers[4], data: colE, borderColor: 'red', borderWidth: 1.5, fill: false, yAxisID: 'y1', tension: 0.1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { display: false },
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: headers[0] } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Values (C & E)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+
+            // Chart 2: A (0), O (14), W (22)
+            const colO = getColumn(14);
+            const colW = getColumn(22);
+
+            const ctx2 = document.getElementById('myChart2').getContext('2d');
+            if (window.chart2) window.chart2.destroy();
+
+            window.chart2 = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: colA.map((_, i) => i+1),
+                    datasets: [
+                        { label: headers[0], data: colA, borderColor: 'green', borderWidth: 1.5, fill: false, yAxisID: 'y', tension: 0.1 },
+                        { label: headers[14], data: colO, borderColor: 'blue', borderWidth: 1.5, fill: false, yAxisID: 'y1', tension: 0.1 },
+                        { label: headers[22], data: colW, borderColor: 'red', borderWidth: 1.5, fill: false, yAxisID: 'y1', tension: 0.1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { display: false },
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: headers[0] } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Values (O & W)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+
+            // Chart 3: A (0), S (18), T (19)
+            const colS = getColumn(18);
+            const colT = getColumn(19);
+
+            const ctx3 = document.getElementById('myChart3').getContext('2d');
+            if (window.chart3) window.chart3.destroy();
+
+            window.chart3 = new Chart(ctx3, {
+                type: 'line',
+                data: {
+                    labels: colA.map((_, i) => i+1),
+                    datasets: [
+                        { label: headers[0], data: colA, borderColor: 'green', borderWidth: 1.5, fill: false, yAxisID: 'y', tension: 0.1 },
+                        { label: headers[18], data: colS, borderColor: 'orange', borderWidth: 1.5, fill: false, yAxisID: 'y1', tension: 0.1 },
+                        { label: headers[19], data: colT, borderColor: 'purple', borderWidth: 1.5, fill: false, yAxisID: 'y1', tension: 0.1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: { display: false },
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: headers[0] } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Values (S & T)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+
+            // Popup alert at the end with 2-second delay
+            setTimeout(() => {
+                alert("Charting complete, it appears your car is slow and you need more horsepower! ⚡");
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
